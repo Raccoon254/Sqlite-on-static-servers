@@ -1,0 +1,5 @@
+node_modules
+.env
+todos.db
+.idea
+.vscode

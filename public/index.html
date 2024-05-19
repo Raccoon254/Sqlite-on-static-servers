@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --text-color: #e0e0e0;
+            --primary-color: #3b82f6;
+            --secondary-color: #8b5cf6;
+            --accent-color: #10b981;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 3rem;
+            color: var(--primary-color);
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        form {
+            display: flex;
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            background-color: #1f1f1f;
+            color: var(--text-color);
+            margin-right: 0.5rem;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: 0.25rem;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        #todos {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .todo {
+            background-color: #1f1f1f;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .todo h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+            text-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+
+        .todo p {
+            margin-bottom: 1rem;
+        }
+
+        .todo .status {
+            font-weight: bold;
+        }
+
+        .todo .status.done {
+            color: var(--accent-color);
+        }
+
+        .todo .status.not-done {
+            color: var(--secondary-color);
+        }
+
+        .todo .actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .todo .actions button {
+            margin-left: 0.5rem;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal-content {
+            background-color: #1f1f1f;
+            margin: 15% auto;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            width: 30%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            text-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+
+        .modal-content input[type="text"] {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .modal-content button {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .modal-content .close {
+            color: var(--text-color);
+            float: right;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .modal-content .close:hover {
+            color: var(--primary-color);
+            text-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Todo App</h1>
+    <form id="create-todo">
+        <input type="text" id="name" placeholder="Name">
+        <input type="text" id="description" placeholder="Description">
+        <button type="submit">Create Todo</button>
+    </form>
+    <div id="todos"></div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Edit Todo</h2>
+        <form id="edit-todo">
+            <input type="text" id="edit-name" placeholder="Name">
+            <input type="text" id="edit-description" placeholder="Description">
+            <button type="submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById('modal');
+    const editTodoForm = document.getElementById('edit-todo');
+    let currentTodoId;
+
+    function fetchTodos() {
+        fetch('http://localhost:3000/todos')
+            .then(response => response.json())
+            .then(todos => {
+                const todosDiv = document.getElementById('todos');
+                todosDiv.innerHTML = '';
+                todos.forEach(todo => {
+                    const todoElement = document.createElement('div');
+                    todoElement.classList.add('bg-white', 'rounded', 'shadow', 'p-4');
+                    todoElement.innerHTML = `
+              <h2 class="text-lg font-bold mb-2">${todo.name}</h2>
+              <p class="mb-2">${todo.description}</p>
+              <p class="mb-4">Status: ${todo.status ? '<span class="text-green-500">Done</span>' : '<span class="text-red-500">Not Done</span>'}</p>
+              <div class="flex justify-end">
+                <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-2" onclick="deleteTodo(${todo.id})">Delete</button>
+                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onclick="openEditModal(${todo.id}, '${todo.name}', '${todo.description}', ${todo.status})">Edit</button>
+              </div>
+            `;
+                    todosDiv.appendChild(todoElement);
+                });
+            });
+    }
+
+    function openEditModal(id, name, description, status) {
+        currentTodoId = id;
+        const editNameInput = document.getElementById('edit-name');
+        const editDescriptionInput = document.getElementById('edit-description');
+        const editStatusCheckbox = document.getElementById('edit-status');
+
+        editNameInput.value = name;
+        editDescriptionInput.value = description;
+        editStatusCheckbox.checked = status;
+
+        modal.style.display = 'block';
+    }
+
+    function closeEditModal() {
+        modal.style.display = 'none';
+    }
+
+    window.onclick = function (event) {
+        if (event.target === modal) {
+            closeEditModal();
+        }
+    }
+
+    const closeButton = document.getElementsByClassName('close')[0];
+    closeButton.onclick = function () {
+        closeEditModal();
+    }
+
+    editTodoForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        const name = document.getElementById('edit-name').value;
+        const description = document.getElementById('edit-description').value;
+        const status = document.getElementById('edit-status').checked;
+
+        fetch(`http://localhost:3000/todos/${currentTodoId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description,
+                status: status,
+            }),
+        })
+            .then(response => response.text())
+            .then(data => {
+                console.log(data);
+                fetchTodos();
+                document.getElementById('edit-name').value = '';
+                document.getElementById('edit-description').value = '';
+                document.getElementById('edit-status').checked = false;
+                modal.style.display = 'none'; // Close the modal by setting display to none
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    });
+    document.getElementById('create-todo').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const name = document.getElementById('name').value;
+        const description = document.getElementById('description').value;
+        const status = document.getElementById('status').checked;
+
+        fetch('http://localhost:3000/todos', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description,
+                status: status,
+            }),
+        })
+            .then(response => response.text())
+            .then(data => {
+                console.log(data);
+                fetchTodos();
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    });
+
+    function deleteTodo(id) {
+        fetch(`http://localhost:3000/todos/${id}`, {
+            method: 'DELETE',
+        })
+            .then(response => response.text())
+            .then(data => {
+                console.log(data);
+                fetchTodos();
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+    }
+
+    fetchTodos();
+</script>
